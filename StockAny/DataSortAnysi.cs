@@ -37,10 +37,10 @@ namespace StockAny
                 if (dtCode.Rows.Count < 3) bIsChoosed = false;
                 for (int iCode = 0; iCode < dtCode.Rows.Count; iCode++)
                 {
-                    if (Convert.ToDouble(dtCode.Rows[iCode]["收"].ToString()) - Convert.ToDouble(dtCode.Rows[iCode]["开"].ToString())<=0)
+                    if (Convert.ToDouble(dtCode.Rows[iCode]["收"].ToString()) - Convert.ToDouble(dtCode.Rows[iCode]["开"].ToString()) <= 0)
                     {
                         bIsChoosed = false;
-                    }                    
+                    }
                 }
 
                 label1.Text = "序列表:" + dt.Rows[i][0].ToString() + " | " + i.ToString();
@@ -160,7 +160,7 @@ namespace StockAny
                         }
 
                     }
-                    label1.Text = "序列表:" + dt.Rows[i][0].ToString() + " | " + i.ToString() + " | " + string.Format("{0:d}",dtCode.Rows[0]["ddate"].ToString());
+                    label1.Text = "序列表:" + dt.Rows[i][0].ToString() + " | " + i.ToString() + " | " + string.Format("{0:d}", dtCode.Rows[0]["ddate"].ToString());
                 }
                 Application.DoEvents();
             }
@@ -173,5 +173,183 @@ namespace StockAny
         }
 
 
+        //当日涨幅大于8的，后3天累计涨幅
+        private void button5_Click(object sender, EventArgs e)
+        {
+            textBox3.Text = "";
+
+            string strSqlCmd = " select  * from [" + textBox4.Text.Trim() + "] " +
+                               "  order by ddate asc";
+            DataTable dtStock = SQLLibary.QryData(strSqlCmd).Tables[0];
+            if (dtStock.Rows.Count > 1)
+            {
+                textBox3.AppendText("涨" + textBox2.Text + "% 后" + textBox5.Text + "天的涨幅");
+                textBox3.AppendText("\r\n");
+                for (int iDay = 0; iDay < dtStock.Rows.Count; iDay++)
+                {
+                    double DFirstOpen = Convert.ToDouble(dtStock.Rows[iDay]["开"].ToString());
+                    double DFirstClose = Convert.ToDouble(dtStock.Rows[iDay]["收"].ToString());
+
+                    //统计 涨
+                    if (((DFirstClose / DFirstOpen) - 1) * 100 >= Convert.ToInt32(textBox2.Text.Trim()))
+                    {
+                        //string aa = (((DFirstClose / DFirstOpen) - 1) * 100).ToString();
+                        //MessageBox.Show(aa);
+                        try
+                        {
+                            int iLastDays = Convert.ToInt32(textBox5.Text.Trim().ToString());
+                            double DThreeClose = Convert.ToDouble(dtStock.Rows[iDay + iLastDays]["收"].ToString());
+                            double TotalPercent = ((DThreeClose / DFirstClose) - 1) * 100;
+
+                            //MessageBox.Show(DThreeClose.ToString() + "  " + DFirstClose.ToString());
+
+                            textBox3.AppendText(TotalPercent.ToString() + "   " + Convert.ToDateTime(dtStock.Rows[iDay]["ddate"].ToString()).ToShortDateString());
+                            textBox3.AppendText("\r\n");
+                        }
+                        catch { }
+                    }
+                    label1.Text = "序列表:" + textBox4.Text.Trim() + " | " + iDay.ToString() + " | " + Convert.ToDateTime(dtStock.Rows[iDay]["ddate"].ToString()).ToShortDateString();
+                }
+
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("跌" + textBox2.Text + "% 后" + textBox5.Text + "天的涨幅");
+                textBox3.AppendText("\r\n");
+
+                for (int iDay = 0; iDay < dtStock.Rows.Count; iDay++)
+                {
+                    double DFirstOpen = Convert.ToDouble(dtStock.Rows[iDay]["开"].ToString());
+                    double DFirstClose = Convert.ToDouble(dtStock.Rows[iDay]["收"].ToString());
+
+                    //统计 跌
+                    if (((DFirstClose / DFirstOpen) - 1) * 100 <= -Convert.ToInt32(textBox2.Text.Trim()))
+                    {
+                        try
+                        {
+                            int iLastDaysDown = Convert.ToInt32(textBox5.Text.Trim().ToString());
+                            double DThreeCloseDown = Convert.ToDouble(dtStock.Rows[iDay + iLastDaysDown]["收"].ToString());
+                            double TotalPercentDown = ((DThreeCloseDown / DFirstClose) - 1) * 100;
+
+                            
+                            textBox3.AppendText(TotalPercentDown.ToString() + "   " + Convert.ToDateTime(dtStock.Rows[iDay]["ddate"].ToString()).ToShortDateString());
+                            textBox3.AppendText("\r\n");
+                        }
+                        catch { }
+                    }
+                }
+            }
+            Application.DoEvents();
+        }
+
+        //分析涨跌平均
+        private void button6_Click(object sender, EventArgs e)
+        {
+            textBox3.Text = "";
+
+            string strSqlCmd = " select top " + textBox6.Text.Trim() + " * from [" + textBox4.Text.Trim() + "] " +
+                               "  order by ddate desc";
+            DataTable dtStock = SQLLibary.QryData(strSqlCmd).Tables[0];
+            if (dtStock.Rows.Count > 1)
+            {
+                double DUp = 0;
+                int iUp = 0;
+                double DDown = 0;
+                int iDown = 0;
+
+                int iotoone = 0;
+                int ionetothree = 0;
+                int ithreetofive = 0;
+                int ifivetosever = 0;
+                int iserverup = 0;
+
+                int iDotoone = 0;
+                int iDonetothree = 0;
+                int iDthreetofive = 0;
+                int iDfivetosever = 0;
+                int iDserverup = 0;
+
+                for (int iDay = 0; iDay < dtStock.Rows.Count; iDay++)
+                {
+                    double DFirstOpen = Convert.ToDouble(dtStock.Rows[iDay]["开"].ToString());
+                    double DFirstClose = Convert.ToDouble(dtStock.Rows[iDay]["收"].ToString());
+
+                    if (DFirstClose >= DFirstOpen)
+                    {
+                        DUp += ((DFirstClose / DFirstOpen) - 1) * 100;
+                        iUp++;
+                    }
+                    else
+                    {
+                        DDown += ((DFirstClose / DFirstOpen) - 1) * 100;
+                        iDown++;
+                    }
+
+                    double DTradeDay = ((DFirstClose / DFirstOpen) - 1) * 100;
+
+                    if (DTradeDay >= 0 && DTradeDay < 1)
+                        iotoone++;
+                    if (DTradeDay >= 1 && DTradeDay < 3)
+                        ionetothree++;
+                    if (DTradeDay >= 3 && DTradeDay < 5)
+                        ithreetofive++;
+                    if (DTradeDay >= 5 && DTradeDay < 7)
+                        ifivetosever++;
+                    if (DTradeDay >= 7)
+                        iserverup++;
+
+                    if (DTradeDay < 0 && DTradeDay >= -1)
+                        iDotoone++;
+                    if (DTradeDay < -1 && DTradeDay >= -3)
+                        iDonetothree++;
+                    if (DTradeDay < -3 && DTradeDay >= -5)
+                        iDthreetofive++;
+                    if (DTradeDay < -5 && DTradeDay >= -7)
+                        iDfivetosever++;
+                    if (DTradeDay < -7)
+                        iDserverup++;
+
+
+                    label1.Text = "序列表:" + textBox4.Text.Trim() + " | " + iDay.ToString() + " | " + Convert.ToDateTime(dtStock.Rows[iDay]["ddate"].ToString()).ToShortDateString();
+                }
+
+                textBox3.AppendText("上涨总百分比 " + Math.Round(DUp,2).ToString() + "   上涨总天数  " + iUp.ToString());
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("上涨平均 " + Math.Round(((DUp / iUp)),2).ToString());
+                textBox3.AppendText("\r\n");
+
+                textBox3.AppendText("下跌总百分比 " + Math.Round(DDown,2).ToString() + "   下跌总天数  " + iDown.ToString());
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("下跌平均 " + Math.Round(((DDown / iDown)),2).ToString());
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("---------------------");
+                textBox3.AppendText("\r\n");
+
+                //分段统计涨跌幅
+                textBox3.AppendText("上涨0～1  " + iotoone.ToString()+" 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("上涨1～3  " + ionetothree.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("上涨3～5  " + ithreetofive.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("上涨5～7  " + ifivetosever.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("上涨7～  " + iserverup.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("\r\n");
+
+                textBox3.AppendText("下跌0～1  " + iDotoone.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("下跌1～3  " + iDonetothree.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("下跌3～5  " + iDthreetofive.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("下跌5～7  " + iDfivetosever.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+                textBox3.AppendText("下跌7～  " + iDserverup.ToString() + " 天");
+                textBox3.AppendText("\r\n");
+
+            }
+            Application.DoEvents();
+
+        }
     }
 }
